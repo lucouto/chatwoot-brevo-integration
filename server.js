@@ -126,10 +126,13 @@ async function updateBrevoContact(email, attributes = {}) {
   }
 
   try {
+    // Log what we're sending to Brevo for debugging
+    console.log('Updating Brevo contact:', email, 'with attributes:', attributes);
+    
     const response = await axios.put(
       `${BREVO_API_URL}/contacts/${encodeURIComponent(email)}`,
       {
-        ...(Object.keys(attributes).length > 0 && { attributes })
+        attributes: attributes
       },
       {
         headers: {
@@ -138,8 +141,11 @@ async function updateBrevoContact(email, attributes = {}) {
         }
       }
     );
+    
+    console.log('Brevo update response:', response.data);
     return response.data;
   } catch (error) {
+    console.error('Brevo API error:', error.response?.data || error.message);
     if (error.response?.data) {
       throw new Error(error.response.data.message || 'Failed to update contact');
     }
