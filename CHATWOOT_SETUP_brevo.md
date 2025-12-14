@@ -22,16 +22,43 @@ Ce guide vous explique comment configurer l'intégration Chatwoot pour afficher 
 3. Créez une nouvelle clé API ou copiez une clé existante
 4. **Important** : Gardez cette clé secrète !
 
-### 1.2 Configurer dans Coolify
+---
+
+## 🔐 Étape 2 : Configurer l'Access Token Chatwoot
+
+L'intégration utilise l'API Chatwoot pour récupérer automatiquement l'email du contact depuis la conversation.
+
+### 2.1 Récupérer votre Access Token Chatwoot
+
+1. Connectez-vous à votre instance Chatwoot
+2. Allez dans **Settings** → **Applications** → **Access Tokens**
+3. Créez un nouveau token ou copiez un token existant
+4. **Important** : Gardez ce token secret !
+
+### 2.2 Configurer dans Coolify
 
 Dans Coolify, ajoutez ces variables d'environnement :
 
 - **BREVO_API_KEY** : Votre clé API Brevo
+- **CHATWOOT_URL** : URL de votre instance Chatwoot (ex: `https://chatwoot.cheminneuf.community`)
+- **CHATWOOT_API_KEY** : Votre Access Token Chatwoot
+- **CHATWOOT_ACCOUNT_ID** : ID de votre compte Chatwoot (par défaut: `1`)
 - **PORT** : `3000` (généralement auto-détecté par Coolify)
+
+### 2.3 (Optionnel) Générer un token API pour protéger notre API
+
+Ce token protège notre API `/api/chatwoot/*` (différent de l'Access Token Chatwoot).
+
+Générez un token avec :
+```bash
+node -e "console.log(require('crypto').randomBytes(32).toString('base64'))"
+```
+
+Ajoutez ensuite **CHATWOOT_API_TOKEN** dans Coolify (optionnel en développement).
 
 ---
 
-## 🚀 Étape 2 : Déployer l'application
+## 🚀 Étape 3 : Déployer l'application
 
 ### Option A : Via Coolify (Recommandé)
 
@@ -61,7 +88,7 @@ Dans Coolify, ajoutez ces variables d'environnement :
 
 ---
 
-## 🔧 Étape 3 : Configurer Chatwoot Dashboard App
+## 🔧 Étape 4 : Configurer Chatwoot Dashboard App
 
 ### 3.1 Accéder aux paramètres Dashboard Apps
 
@@ -80,7 +107,7 @@ Sauvegardez la configuration.
 
 ---
 
-## 🧪 Étape 4 : Tester l'intégration
+## 🧪 Étape 5 : Tester l'intégration
 
 ### 4.1 Tester la page HTML
 
