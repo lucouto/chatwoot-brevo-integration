@@ -646,12 +646,13 @@
         }
 
         // Build attributes object for Brevo
+        // Brevo uses lowercase field keys: firstname, lastname, WHATSAPP
         const attributes = {};
         if (firstName && firstName.trim()) {
-          attributes.FIRSTNAME = firstName.trim();
+          attributes.firstname = firstName.trim();
         }
         if (lastName && lastName.trim()) {
-          attributes.LASTNAME = lastName.trim();
+          attributes.lastname = lastName.trim();
         }
         if (whatsappNumber) {
           attributes.WHATSAPP = whatsappNumber;
