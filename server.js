@@ -223,12 +223,8 @@ app.get('/api/chatwoot/contact', optionalAuth, async (req, res) => {
     if (conversationId && !contactId) {
       const conversation = await getChatwootConversation(conversationId);
       if (conversation) {
-        // Try different possible locations for contact ID
-        contactIdToUse = conversation.meta?.sender?.id || 
-                        conversation.meta?.assignee?.id ||
-                        conversation.assignee?.id ||
-                        conversation.meta?.contact?.id ||
-                        conversation.contact?.id;
+        // Chatwoot API returns contact ID in conversation.contact.id or conversation.contact_id
+        contactIdToUse = conversation.contact?.id || conversation.contact_id;
       }
     }
     
@@ -241,8 +237,9 @@ app.get('/api/chatwoot/contact', optionalAuth, async (req, res) => {
       return res.status(404).json({ error: 'Contact not found' });
     }
 
-    // Extract email from contact
+    // Extract email from contact - Chatwoot returns it in contact.email or contact.contact.email
     const email = contact.email || 
+                 contact.contact?.email ||
                  contact.identifier ||
                  (contact.additional_attributes && contact.additional_attributes.email);
 

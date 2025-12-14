@@ -279,20 +279,25 @@
       console.log('Parsed event data:', eventData);
 
       // Handle different event types from Chatwoot
-      // Chatwoot can send data in various formats:
-      // 1. Direct contact object
-      // 2. Nested in eventData.contact
-      // 3. In eventData.data.contact
-      // 4. As conversation payload with contact info
+      // According to Chatwoot docs, the format is: { "event": "appContext", "data": { "conversation": {...}, "contact": {...}, "currentAgent": {...} } }
       
       let contact = null;
-      if (eventData.contact) {
+      let conversation = null;
+      
+      // Priority: Handle appContext event (official Chatwoot format)
+      if (eventData.event === 'appContext' && eventData.data) {
+        contact = eventData.data.contact;
+        conversation = eventData.data.conversation;
+        console.log('Received appContext event - Conversation:', conversation?.id, 'Contact:', contact?.id);
+      } else if (eventData.contact) {
+        // Fallback: Direct contact object
         contact = eventData.contact;
       } else if (eventData.data && eventData.data.contact) {
+        // Fallback: Nested in data.contact
         contact = eventData.data.contact;
-      } else if (eventData.type && eventData.data) {
-        contact = eventData.data;
+        conversation = eventData.data.conversation;
       } else if (eventData.email || eventData.identifier) {
+        // Fallback: Direct email/identifier
         contact = eventData;
       }
 
@@ -307,8 +312,8 @@
 
         // If no email found directly, use Chatwoot API to fetch it
         if (!email || !email.includes('@')) {
-          const contactId = contact.id || eventData.contact?.id || eventData.data?.contact?.id;
-          const conversationId = eventData.conversation?.id || eventData.data?.conversation?.id;
+          const contactId = contact?.id;
+          const conversationId = conversation?.id;
           
           if (contactId || conversationId) {
             console.log('Fetching email from Chatwoot API using contactId:', contactId, 'conversationId:', conversationId);
