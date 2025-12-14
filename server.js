@@ -120,24 +120,25 @@ async function createOrUpdateContact(email, attributes = {}, listIds = []) {
   }
 }
 
-async function updateBrevoContact(email, attributes = {}) {
+async function updateBrevoContactById(contactId, attributes = {}) {
   if (!BREVO_API_KEY) {
     throw new Error('BREVO_API_KEY is not configured');
   }
 
   try {
     // Log what we're sending to Brevo for debugging
-    console.log('Updating Brevo contact:', email, 'with attributes:', attributes);
+    console.log('Updating Brevo contact ID:', contactId, 'with attributes:', attributes);
     
     const response = await axios.put(
-      `${BREVO_API_URL}/contacts/${encodeURIComponent(email)}`,
+      `${BREVO_API_URL}/contacts/${contactId}`,
       {
         attributes: attributes
       },
       {
         headers: {
           'api-key': BREVO_API_KEY,
-          'Content-Type': 'application/json'
+          'Content-Type': 'application/json',
+          'Accept': 'application/json'
         }
       }
     );
@@ -151,6 +152,17 @@ async function updateBrevoContact(email, attributes = {}) {
     }
     throw error;
   }
+}
+
+async function updateBrevoContact(email, attributes = {}) {
+  // First get the contact to find its ID
+  const contact = await getBrevoContact(email);
+  if (!contact || !contact.id) {
+    throw new Error('Contact not found in Brevo');
+  }
+  
+  // Update using contact ID
+  return await updateBrevoContactById(contact.id, attributes);
 }
 
 async function getBrevoLists() {
