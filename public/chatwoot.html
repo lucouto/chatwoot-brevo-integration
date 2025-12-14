@@ -260,34 +260,77 @@
       // Security: Verify origin if needed
       // if (event.origin !== 'https://your-chatwoot-domain.com') return;
 
-      if (!isJSONValid(event.data)) {
+      // Debug: Log all messages from Chatwoot
+      console.log('Received message from Chatwoot:', event.data);
+
+      // Handle both JSON strings and objects
+      let eventData;
+      if (typeof event.data === 'string') {
+        if (!isJSONValid(event.data)) {
+          return;
+        }
+        eventData = JSON.parse(event.data);
+      } else if (typeof event.data === 'object') {
+        eventData = event.data;
+      } else {
         return;
       }
 
-      const eventData = JSON.parse(event.data);
+      console.log('Parsed event data:', eventData);
 
       // Handle different event types from Chatwoot
-      if (eventData.type === 'contact-info' || eventData.contact) {
-        const contact = eventData.contact || eventData;
+      // Chatwoot can send data in various formats:
+      // 1. Direct contact object
+      // 2. Nested in eventData.contact
+      // 3. In eventData.data.contact
+      // 4. As conversation payload with contact info
+      
+      let contact = null;
+      if (eventData.contact) {
+        contact = eventData.contact;
+      } else if (eventData.data && eventData.data.contact) {
+        contact = eventData.data.contact;
+      } else if (eventData.type && eventData.data) {
+        contact = eventData.data;
+      } else if (eventData.email || eventData.identifier) {
+        contact = eventData;
+      }
+
+      if (contact) {
+        // Extract email from contact - try multiple possible locations
+        const email = contact.email || 
+                     contact.identifier ||
+                     (contact.contact_inboxes && contact.contact_inboxes[0]?.source_id) ||
+                     (contact.additional_attributes && contact.additional_attributes.email);
         
-        // Extract email from contact
-        const email = contact.email || contact.identifier || 
-                     (contact.contact_inboxes && contact.contact_inboxes[0]?.source_id);
-        
-        if (email) {
+        console.log('Extracted email:', email);
+
+        if (email && email.includes('@')) {
           currentEmail = email;
           await loadContactDetails(email);
           await loadLists();
+        } else {
+          console.warn('No valid email found in contact data:', contact);
         }
+      } else {
+        console.warn('No contact data found in event:', eventData);
       }
     });
 
-    // Request contact info from Chatwoot on load
-    window.addEventListener('load', function() {
-      // Request latest conversation data from Chatwoot
+    // Request contact info from Chatwoot on load and periodically
+    function requestChatwootInfo() {
       if (window.parent) {
+        console.log('Requesting contact info from Chatwoot...');
         window.parent.postMessage('chatwoot-dashboard-app:fetch-info', '*');
       }
+    }
+
+    window.addEventListener('load', function() {
+      // Request immediately on load
+      requestChatwootInfo();
+      
+      // Also request after a short delay in case Chatwoot needs time to initialize
+      setTimeout(requestChatwootInfo, 500);
     });
 
     // Load contact details from Brevo
@@ -297,15 +340,15 @@
       const errorEl = document.getElementById('error');
       const contactInfoEl = document.getElementById('contactInfo');
 
-      loadingEl.style.display = 'block';
-      contentEl.style.display = 'none';
-      errorEl.style.display = 'none';
+      if (loadingEl) loadingEl.style.display = 'block';
+      if (contentEl) contentEl.style.display = 'none';
+      if (errorEl) errorEl.style.display = 'none';
 
       try {
         const response = await fetch(`/api/brevo/contact/${encodeURIComponent(email)}`);
         const data = await response.json();
 
-        loadingEl.style.display = 'none';
+        if (loadingEl) loadingEl.style.display = 'none';
 
         if (!response.ok) {
           if (data.exists === false) {
@@ -321,20 +364,22 @@
                 <span class="badge badge-warning">Non inscrit</span>
               </div>
             `;
-            contentEl.style.display = 'block';
+            if (contentEl) contentEl.style.display = 'block';
           } else {
             throw new Error(data.message || 'Failed to fetch contact');
           }
         } else {
           contactData = data.contact;
           displayContactInfo(data.contact, email);
-          contentEl.style.display = 'block';
+          if (contentEl) contentEl.style.display = 'block';
         }
       } catch (error) {
         console.error('Error loading contact:', error);
-        loadingEl.style.display = 'none';
-        errorEl.textContent = `Erreur: ${error.message}`;
-        errorEl.style.display = 'block';
+        if (loadingEl) loadingEl.style.display = 'none';
+        if (errorEl) {
+          errorEl.textContent = `Erreur: ${error.message}`;
+          errorEl.style.display = 'block';
+        }
       }
     }
 
