@@ -32,7 +32,38 @@
       color: #1f2937;
       display: flex;
       align-items: center;
+      justify-content: space-between;
       gap: 10px;
+    }
+
+    .header-actions {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .btn-refresh-small {
+      background: none;
+      border: 1px solid #d1d5db;
+      border-radius: 6px;
+      padding: 6px 10px;
+      cursor: pointer;
+      font-size: 16px;
+      color: #6b7280;
+      transition: all 0.2s;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .btn-refresh-small:hover {
+      background: #f3f4f6;
+      border-color: #9ca3af;
+      color: #374151;
+    }
+
+    .btn-refresh-small:active {
+      transform: rotate(180deg);
     }
 
     .brevo-logo {
@@ -211,11 +242,18 @@
 <body>
   <div class="container">
     <h1>
-      <svg class="brevo-logo" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-        <path d="M12 2L2 7L12 12L22 7L12 2Z" fill="#00A4BD"/>
-        <path d="M2 17L12 22L22 17V12L12 17L2 12V17Z" fill="#00A4BD"/>
-      </svg>
-      Brevo Contact Details
+      <span style="display: flex; align-items: center; gap: 10px;">
+        <svg class="brevo-logo" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <path d="M12 2L2 7L12 12L22 7L12 2Z" fill="#00A4BD"/>
+          <path d="M2 17L12 22L22 17V12L12 17L2 12V17Z" fill="#00A4BD"/>
+        </svg>
+        Brevo Contact Details
+      </span>
+      <div class="header-actions">
+        <button class="btn-refresh-small" onclick="location.reload()" title="Actualiser la page">
+          🔄
+        </button>
+      </div>
     </h1>
 
     <div id="loading" class="loading">
