@@ -592,24 +592,44 @@
 
       try {
         // Extract data from Chatwoot contact
-        // Chatwoot contact structure: { name: "First Last", additional_attributes: { phone_number: "...", name: "..." } }
-        const chatwootName = chatwootContactData.name || '';
-        const chatwootPhone = chatwootContactData.phone_number || 
-                             chatwootContactData.additional_attributes?.phone_number ||
-                             chatwootContactData.additional_attributes?.phone;
+        // Chatwoot contact can have name in different places:
+        // - contact.name (full name as string)
+        // - contact.first_name and contact.last_name (separate fields)
+        // - contact.additional_attributes.first_name and contact.additional_attributes.last_name
         
-        // Split name into first and last name
+        console.log('Chatwoot contact data:', chatwootContactData);
+        
+        // Try to get first and last name from different possible locations
         let firstName = '';
         let lastName = '';
-        if (chatwootName) {
-          const nameParts = chatwootName.trim().split(/\s+/);
+        
+        // Option 1: Separate first_name and last_name fields
+        if (chatwootContactData.first_name || chatwootContactData.last_name) {
+          firstName = chatwootContactData.first_name || '';
+          lastName = chatwootContactData.last_name || '';
+        }
+        // Option 2: In additional_attributes
+        else if (chatwootContactData.additional_attributes?.first_name || chatwootContactData.additional_attributes?.last_name) {
+          firstName = chatwootContactData.additional_attributes.first_name || '';
+          lastName = chatwootContactData.additional_attributes.last_name || '';
+        }
+        // Option 3: Split full name string
+        else if (chatwootContactData.name) {
+          const nameParts = chatwootContactData.name.trim().split(/\s+/);
           if (nameParts.length >= 2) {
             firstName = nameParts[0];
             lastName = nameParts.slice(1).join(' ');
           } else {
-            firstName = chatwootName;
+            firstName = chatwootContactData.name;
           }
         }
+        
+        console.log('Extracted names - First:', firstName, 'Last:', lastName);
+        
+        // Extract phone number
+        const chatwootPhone = chatwootContactData.phone_number || 
+                             chatwootContactData.additional_attributes?.phone_number ||
+                             chatwootContactData.additional_attributes?.phone;
 
         // Format phone number for Brevo (remove spaces, ensure + prefix)
         let whatsappNumber = null;
@@ -627,9 +647,17 @@
 
         // Build attributes object for Brevo
         const attributes = {};
-        if (firstName) attributes.FIRSTNAME = firstName;
-        if (lastName) attributes.LASTNAME = lastName;
-        if (whatsappNumber) attributes.WHATSAPP = whatsappNumber;
+        if (firstName && firstName.trim()) {
+          attributes.FIRSTNAME = firstName.trim();
+        }
+        if (lastName && lastName.trim()) {
+          attributes.LASTNAME = lastName.trim();
+        }
+        if (whatsappNumber) {
+          attributes.WHATSAPP = whatsappNumber;
+        }
+
+        console.log('Sending attributes to Brevo:', attributes);
 
         if (Object.keys(attributes).length === 0) {
           throw new Error('Aucune donnée à mettre à jour (nom, prénom ou téléphone manquants)');
