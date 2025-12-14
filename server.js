@@ -16,9 +16,19 @@ app.use(express.static('public'));
 const BREVO_API_KEY = process.env.BREVO_API_KEY;
 const BREVO_API_URL = 'https://api.brevo.com/v3';
 
+// Chatwoot API configuration
+const CHATWOOT_URL = process.env.CHATWOOT_URL;
+const CHATWOOT_API_KEY = process.env.CHATWOOT_API_KEY || process.env.CHATWOOT_ACCESS_TOKEN;
+const CHATWOOT_ACCOUNT_ID = process.env.CHATWOOT_ACCOUNT_ID || '1';
+const CHATWOOT_API_TOKEN = process.env.CHATWOOT_API_TOKEN; // Optional token to protect our API
+
 // Validate environment variables
 if (!BREVO_API_KEY) {
   console.warn('⚠️  WARNING: BREVO_API_KEY is not set. Brevo API calls will fail.');
+}
+
+if (!CHATWOOT_URL || !CHATWOOT_API_KEY) {
+  console.warn('⚠️  WARNING: CHATWOOT_URL or CHATWOOT_API_KEY is not set. Chatwoot API integration will not work.');
 }
 
 // Helper function to validate JSON
@@ -135,7 +145,127 @@ async function getBrevoLists() {
   }
 }
 
+// Chatwoot API helper functions
+async function getChatwootContact(contactId) {
+  if (!CHATWOOT_URL || !CHATWOOT_API_KEY) {
+    throw new Error('Chatwoot API is not configured');
+  }
+
+  try {
+    const response = await axios.get(
+      `${CHATWOOT_URL}/api/v1/accounts/${CHATWOOT_ACCOUNT_ID}/contacts/${contactId}`,
+      {
+        headers: {
+          'api_access_token': CHATWOOT_API_KEY
+        }
+      }
+    );
+    return response.data;
+  } catch (error) {
+    if (error.response?.status === 404) {
+      return null;
+    }
+    throw error;
+  }
+}
+
+async function getChatwootConversation(conversationId) {
+  if (!CHATWOOT_URL || !CHATWOOT_API_KEY) {
+    throw new Error('Chatwoot API is not configured');
+  }
+
+  try {
+    const response = await axios.get(
+      `${CHATWOOT_URL}/api/v1/accounts/${CHATWOOT_ACCOUNT_ID}/conversations/${conversationId}`,
+      {
+        headers: {
+          'api_access_token': CHATWOOT_API_KEY
+        }
+      }
+    );
+    return response.data;
+  } catch (error) {
+    if (error.response?.status === 404) {
+      return null;
+    }
+    throw error;
+  }
+}
+
+// Middleware to optionally check CHATWOOT_API_TOKEN (for protecting our API)
+function optionalAuth(req, res, next) {
+  if (CHATWOOT_API_TOKEN) {
+    const authHeader = req.headers.authorization;
+    if (!authHeader || authHeader !== `Bearer ${CHATWOOT_API_TOKEN}`) {
+      console.warn('⚠️  API request without valid token (in development mode, allowing anyway)');
+      // In development, we allow requests without token
+      // In production, you might want to return 401 here
+    }
+  }
+  next();
+}
+
 // API Routes
+
+// Get contact email from Chatwoot (using conversation or contact ID)
+app.get('/api/chatwoot/contact', optionalAuth, async (req, res) => {
+  try {
+    const { conversationId, contactId } = req.query;
+
+    if (!conversationId && !contactId) {
+      return res.status(400).json({ error: 'conversationId or contactId is required' });
+    }
+
+    let contact = null;
+    let contactIdToUse = contactId;
+    
+    // If we have conversationId, get conversation first to get contactId
+    if (conversationId && !contactId) {
+      const conversation = await getChatwootConversation(conversationId);
+      if (conversation) {
+        // Try different possible locations for contact ID
+        contactIdToUse = conversation.meta?.sender?.id || 
+                        conversation.meta?.assignee?.id ||
+                        conversation.assignee?.id ||
+                        conversation.meta?.contact?.id ||
+                        conversation.contact?.id;
+      }
+    }
+    
+    // Fetch contact using contactId
+    if (contactIdToUse) {
+      contact = await getChatwootContact(contactIdToUse);
+    }
+
+    if (!contact) {
+      return res.status(404).json({ error: 'Contact not found' });
+    }
+
+    // Extract email from contact
+    const email = contact.email || 
+                 contact.identifier ||
+                 (contact.additional_attributes && contact.additional_attributes.email);
+
+    if (!email || !email.includes('@')) {
+      return res.status(404).json({ error: 'Contact email not found' });
+    }
+
+    res.json({
+      email,
+      contact: {
+        id: contact.id,
+        name: contact.name,
+        email: email
+      }
+    });
+  } catch (error) {
+    console.error('Error fetching Chatwoot contact:', error);
+    res.status(500).json({ 
+      error: 'Failed to fetch contact from Chatwoot',
+      message: error.message 
+    });
+  }
+});
 
 // Get Brevo contact details
 app.get('/api/brevo/contact/:email', async (req, res) => {

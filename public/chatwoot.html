@@ -297,13 +297,39 @@
       }
 
       if (contact) {
-        // Extract email from contact - try multiple possible locations
-        const email = contact.email || 
-                     contact.identifier ||
-                     (contact.contact_inboxes && contact.contact_inboxes[0]?.source_id) ||
-                     (contact.additional_attributes && contact.additional_attributes.email);
+        // First try to extract email directly from contact data
+        let email = contact.email || 
+                   contact.identifier ||
+                   (contact.contact_inboxes && contact.contact_inboxes[0]?.source_id) ||
+                   (contact.additional_attributes && contact.additional_attributes.email);
         
-        console.log('Extracted email:', email);
+        console.log('Extracted email from contact:', email);
+
+        // If no email found directly, use Chatwoot API to fetch it
+        if (!email || !email.includes('@')) {
+          const contactId = contact.id || eventData.contact?.id || eventData.data?.contact?.id;
+          const conversationId = eventData.conversation?.id || eventData.data?.conversation?.id;
+          
+          if (contactId || conversationId) {
+            console.log('Fetching email from Chatwoot API using contactId:', contactId, 'conversationId:', conversationId);
+            try {
+              const params = new URLSearchParams();
+              if (contactId) params.append('contactId', contactId);
+              if (conversationId) params.append('conversationId', conversationId);
+              
+              const response = await fetch(`/api/chatwoot/contact?${params.toString()}`);
+              if (response.ok) {
+                const data = await response.json();
+                email = data.email;
+                console.log('Got email from Chatwoot API:', email);
+              } else {
+                console.warn('Failed to fetch email from Chatwoot API:', await response.text());
+              }
+            } catch (error) {
+              console.error('Error fetching email from Chatwoot API:', error);
+            }
+          }
+        }
 
         if (email && email.includes('@')) {
           currentEmail = email;
@@ -311,6 +337,14 @@
           await loadLists();
         } else {
           console.warn('No valid email found in contact data:', contact);
+          // Show error to user
+          const errorEl = document.getElementById('error');
+          const loadingEl = document.getElementById('loading');
+          if (loadingEl) loadingEl.style.display = 'none';
+          if (errorEl) {
+            errorEl.textContent = 'Impossible de récupérer l\'email du contact depuis Chatwoot.';
+            errorEl.style.display = 'block';
+          }
         }
       } else {
         console.warn('No contact data found in event:', eventData);
