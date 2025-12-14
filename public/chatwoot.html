@@ -296,18 +296,21 @@
       if (eventData.event === 'appContext' && eventData.data) {
         contact = eventData.data.contact;
         conversation = eventData.data.conversation;
+        chatwootContactData = contact; // Store for later use
         console.log('Received appContext event - Conversation:', conversation?.id, 'Contact:', contact?.id);
       } else if (eventData.contact) {
         // Fallback: Direct contact object
         contact = eventData.contact;
+        chatwootContactData = contact;
       } else if (eventData.data && eventData.data.contact) {
         // Fallback: Nested in data.contact
         contact = eventData.data.contact;
         conversation = eventData.data.conversation;
+        chatwootContactData = contact;
       } else if (eventData.email || eventData.identifier) {
         // Fallback: Direct email/identifier
-          contact = eventData;
-          chatwootContactData = contact;
+        contact = eventData;
+        chatwootContactData = contact;
       }
 
       if (contact) {
@@ -363,11 +366,6 @@
           if (errorEl) {
             errorEl.textContent = 'Impossible de récupérer l\'email du contact depuis Chatwoot.';
             errorEl.style.display = 'block';
-          }
-        } else {
-          // No email but we have contact data, enable update button if possible
-          if (chatwootContactData) {
-            document.getElementById('updateContactBtn').disabled = false;
           }
         }
       } else {
