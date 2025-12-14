@@ -453,15 +453,6 @@
     // Helper function to get list names from IDs
     function getListNames(listIds) {
       if (!listIds || listIds.length === 0) return [];
-      return listIds.map(id => {
-        const list = lists.find(l => l.id === id);
-        return list ? list.name : `Liste ${id}`;
-      });
-    }
-
-    // Helper function to get list names from IDs
-    function getListNames(listIds) {
-      if (!listIds || listIds.length === 0) return [];
       if (!lists || lists.length === 0) {
         // Lists not loaded yet, return IDs as fallback
         return listIds.map(id => `Liste ${id}`);
