@@ -205,6 +205,20 @@
       background: #4b5563;
     }
 
+    .btn-red {
+      background: #dc2626;
+      color: white;
+    }
+
+    .btn-red:hover {
+      background: #b91c1c;
+    }
+
+    .btn-red:disabled {
+      background: #9ca3af;
+      cursor: not-allowed;
+    }
+
     .no-contact {
       text-align: center;
       padding: 40px;
@@ -268,7 +282,7 @@
       
       <div class="subscribe-section">
         <h2>Actions</h2>
-        <button id="updateContactBtn" class="btn btn-secondary" style="width: 100%; margin-bottom: 12px;" disabled>
+        <button id="updateContactBtn" class="btn btn-red" style="margin-bottom: 12px;" disabled>
           Mettre à jour depuis Chatwoot
         </button>
       </div>
