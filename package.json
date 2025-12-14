@@ -1,0 +1,28 @@
+{
+  "name": "chatwoot-brevo-integration",
+  "version": "1.0.0",
+  "description": "Chatwoot Dashboard App for Brevo integration",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "dev": "node server.js",
+    "generate-chatwoot-token": "node -e \"console.log(require('crypto').randomBytes(32).toString('base64'))\""
+  },
+  "keywords": [
+    "chatwoot",
+    "brevo",
+    "dashboard-app"
+  ],
+  "author": "",
+  "license": "MIT",
+  "dependencies": {
+    "express": "^4.18.2",
+    "cors": "^2.8.5",
+    "axios": "^1.6.0",
+    "dotenv": "^16.3.1"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  }
+}
+

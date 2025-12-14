@@ -1,0 +1,482 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Brevo Integration - Chatwoot</title>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+      background: #f5f5f5;
+      color: #333;
+      padding: 20px;
+    }
+
+    .container {
+      max-width: 100%;
+      background: white;
+      border-radius: 8px;
+      padding: 24px;
+      box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    }
+
+    h1 {
+      font-size: 24px;
+      margin-bottom: 20px;
+      color: #1f2937;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .brevo-logo {
+      width: 24px;
+      height: 24px;
+    }
+
+    .loading {
+      text-align: center;
+      padding: 40px;
+      color: #6b7280;
+    }
+
+    .error {
+      background: #fee2e2;
+      border: 1px solid #fecaca;
+      color: #991b1b;
+      padding: 12px;
+      border-radius: 6px;
+      margin-bottom: 20px;
+    }
+
+    .success {
+      background: #d1fae5;
+      border: 1px solid #a7f3d0;
+      color: #065f46;
+      padding: 12px;
+      border-radius: 6px;
+      margin-bottom: 20px;
+    }
+
+    .contact-info {
+      background: #f9fafb;
+      border: 1px solid #e5e7eb;
+      border-radius: 6px;
+      padding: 16px;
+      margin-bottom: 20px;
+    }
+
+    .contact-info h2 {
+      font-size: 18px;
+      margin-bottom: 12px;
+      color: #1f2937;
+    }
+
+    .info-row {
+      display: flex;
+      justify-content: space-between;
+      padding: 8px 0;
+      border-bottom: 1px solid #e5e7eb;
+    }
+
+    .info-row:last-child {
+      border-bottom: none;
+    }
+
+    .info-label {
+      font-weight: 600;
+      color: #6b7280;
+    }
+
+    .info-value {
+      color: #1f2937;
+    }
+
+    .badge {
+      display: inline-block;
+      padding: 4px 8px;
+      border-radius: 4px;
+      font-size: 12px;
+      font-weight: 600;
+    }
+
+    .badge-success {
+      background: #d1fae5;
+      color: #065f46;
+    }
+
+    .badge-warning {
+      background: #fef3c7;
+      color: #92400e;
+    }
+
+    .subscribe-section {
+      margin-top: 24px;
+      padding-top: 24px;
+      border-top: 2px solid #e5e7eb;
+    }
+
+    .subscribe-section h2 {
+      font-size: 18px;
+      margin-bottom: 16px;
+      color: #1f2937;
+    }
+
+    .list-select {
+      width: 100%;
+      padding: 10px;
+      border: 1px solid #d1d5db;
+      border-radius: 6px;
+      margin-bottom: 12px;
+      font-size: 14px;
+      background: white;
+    }
+
+    .btn {
+      padding: 10px 20px;
+      border: none;
+      border-radius: 6px;
+      font-size: 14px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.2s;
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .btn-primary {
+      background: #3b82f6;
+      color: white;
+    }
+
+    .btn-primary:hover:not(:disabled) {
+      background: #2563eb;
+    }
+
+    .btn-primary:disabled {
+      background: #9ca3af;
+      cursor: not-allowed;
+    }
+
+    .btn-secondary {
+      background: #6b7280;
+      color: white;
+    }
+
+    .btn-secondary:hover {
+      background: #4b5563;
+    }
+
+    .no-contact {
+      text-align: center;
+      padding: 40px;
+      color: #6b7280;
+    }
+
+    .attributes-list {
+      margin-top: 12px;
+    }
+
+    .attribute-item {
+      padding: 8px 0;
+      border-bottom: 1px solid #e5e7eb;
+    }
+
+    .attribute-item:last-child {
+      border-bottom: none;
+    }
+
+    .spinner {
+      display: inline-block;
+      width: 14px;
+      height: 14px;
+      border: 2px solid #ffffff;
+      border-top-color: transparent;
+      border-radius: 50%;
+      animation: spin 0.6s linear infinite;
+    }
+
+    @keyframes spin {
+      to { transform: rotate(360deg); }
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>
+      <svg class="brevo-logo" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <path d="M12 2L2 7L12 12L22 7L12 2Z" fill="#00A4BD"/>
+        <path d="M2 17L12 22L22 17V12L12 17L2 12V17Z" fill="#00A4BD"/>
+      </svg>
+      Brevo Contact Details
+    </h1>
+
+    <div id="loading" class="loading">
+      En attente des données du contact depuis Chatwoot...
+    </div>
+
+    <div id="error" class="error" style="display: none;"></div>
+    <div id="success" class="success" style="display: none;"></div>
+
+    <div id="content" style="display: none;">
+      <div id="contactInfo" class="contact-info"></div>
+      
+      <div class="subscribe-section">
+        <h2>Ajouter à une liste Brevo</h2>
+        <select id="listSelect" class="list-select">
+          <option value="">Chargement des listes...</option>
+        </select>
+        <button id="subscribeBtn" class="btn btn-primary" disabled>
+          S'abonner à la liste
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    let currentEmail = null;
+    let contactData = null;
+    let lists = [];
+
+    // Helper function to validate JSON
+    function isJSONValid(str) {
+      try {
+        JSON.parse(str);
+        return true;
+      } catch (e) {
+        return false;
+      }
+    }
+
+    // Listen for messages from Chatwoot
+    window.addEventListener('message', async function(event) {
+      // Security: Verify origin if needed
+      // if (event.origin !== 'https://your-chatwoot-domain.com') return;
+
+      if (!isJSONValid(event.data)) {
+        return;
+      }
+
+      const eventData = JSON.parse(event.data);
+
+      // Handle different event types from Chatwoot
+      if (eventData.type === 'contact-info' || eventData.contact) {
+        const contact = eventData.contact || eventData;
+        
+        // Extract email from contact
+        const email = contact.email || contact.identifier || 
+                     (contact.contact_inboxes && contact.contact_inboxes[0]?.source_id);
+        
+        if (email) {
+          currentEmail = email;
+          await loadContactDetails(email);
+          await loadLists();
+        }
+      }
+    });
+
+    // Request contact info from Chatwoot on load
+    window.addEventListener('load', function() {
+      // Request latest conversation data from Chatwoot
+      if (window.parent) {
+        window.parent.postMessage('chatwoot-dashboard-app:fetch-info', '*');
+      }
+    });
+
+    // Load contact details from Brevo
+    async function loadContactDetails(email) {
+      const loadingEl = document.getElementById('loading');
+      const contentEl = document.getElementById('content');
+      const errorEl = document.getElementById('error');
+      const contactInfoEl = document.getElementById('contactInfo');
+
+      loadingEl.style.display = 'block';
+      contentEl.style.display = 'none';
+      errorEl.style.display = 'none';
+
+      try {
+        const response = await fetch(`/api/brevo/contact/${encodeURIComponent(email)}`);
+        const data = await response.json();
+
+        loadingEl.style.display = 'none';
+
+        if (!response.ok) {
+          if (data.exists === false) {
+            // Contact doesn't exist in Brevo
+            contactInfoEl.innerHTML = `
+              <h2>Contact non trouvé dans Brevo</h2>
+              <div class="info-row">
+                <span class="info-label">Email:</span>
+                <span class="info-value">${email}</span>
+              </div>
+              <div class="info-row">
+                <span class="info-label">Statut:</span>
+                <span class="badge badge-warning">Non inscrit</span>
+              </div>
+            `;
+            contentEl.style.display = 'block';
+          } else {
+            throw new Error(data.message || 'Failed to fetch contact');
+          }
+        } else {
+          contactData = data.contact;
+          displayContactInfo(data.contact, email);
+          contentEl.style.display = 'block';
+        }
+      } catch (error) {
+        console.error('Error loading contact:', error);
+        loadingEl.style.display = 'none';
+        errorEl.textContent = `Erreur: ${error.message}`;
+        errorEl.style.display = 'block';
+      }
+    }
+
+    // Display contact information
+    function displayContactInfo(contact, email) {
+      const contactInfoEl = document.getElementById('contactInfo');
+
+      const attributes = contact.attributes || {};
+      const lists = contact.listIds || [];
+      const emailBlacklisted = contact.emailBlacklisted || false;
+      const smsBlacklisted = contact.smsBlacklisted || false;
+
+      let html = `
+        <h2>Informations du contact</h2>
+        <div class="info-row">
+          <span class="info-label">Email:</span>
+          <span class="info-value">${email}</span>
+        </div>
+        <div class="info-row">
+          <span class="info-label">ID:</span>
+          <span class="info-value">${contact.id || 'N/A'}</span>
+        </div>
+        <div class="info-row">
+          <span class="info-label">Statut:</span>
+          <span class="badge ${emailBlacklisted ? 'badge-warning' : 'badge-success'}">
+            ${emailBlacklisted ? 'Email bloqué' : 'Actif'}
+          </span>
+        </div>
+        ${lists.length > 0 ? `
+          <div class="info-row">
+            <span class="info-label">Listes:</span>
+            <span class="info-value">${lists.join(', ')}</span>
+          </div>
+        ` : ''}
+      `;
+
+      // Add custom attributes
+      if (Object.keys(attributes).length > 0) {
+        html += '<div class="attributes-list"><strong>Attributs:</strong>';
+        for (const [key, value] of Object.entries(attributes)) {
+          html += `
+            <div class="attribute-item">
+              <span class="info-label">${key}:</span>
+              <span class="info-value">${value || 'N/A'}</span>
+            </div>
+          `;
+        }
+        html += '</div>';
+      }
+
+      contactInfoEl.innerHTML = html;
+    }
+
+    // Load Brevo lists
+    async function loadLists() {
+      const listSelect = document.getElementById('listSelect');
+      const subscribeBtn = document.getElementById('subscribeBtn');
+
+      try {
+        const response = await fetch('/api/brevo/lists');
+        const data = await response.json();
+
+        if (response.ok && data.lists) {
+          lists = data.lists;
+          listSelect.innerHTML = '<option value="">Sélectionner une liste...</option>';
+          
+          lists.forEach(list => {
+            const option = document.createElement('option');
+            option.value = list.id;
+            option.textContent = `${list.name} (${list.uniqueSubscribers || 0} abonnés)`;
+            listSelect.appendChild(option);
+          });
+
+          listSelect.addEventListener('change', function() {
+            subscribeBtn.disabled = !this.value || !currentEmail;
+          });
+
+          if (currentEmail) {
+            subscribeBtn.disabled = !listSelect.value;
+          }
+        } else {
+          throw new Error(data.message || 'Failed to load lists');
+        }
+      } catch (error) {
+        console.error('Error loading lists:', error);
+        listSelect.innerHTML = '<option value="">Erreur lors du chargement des listes</option>';
+      }
+    }
+
+    // Subscribe contact to list
+    document.getElementById('subscribeBtn').addEventListener('click', async function() {
+      const listId = document.getElementById('listSelect').value;
+      const errorEl = document.getElementById('error');
+      const successEl = document.getElementById('success');
+      const subscribeBtn = this;
+
+      if (!listId || !currentEmail) {
+        return;
+      }
+
+      const originalText = subscribeBtn.innerHTML;
+      subscribeBtn.disabled = true;
+      subscribeBtn.innerHTML = '<span class="spinner"></span> Inscription en cours...';
+
+      errorEl.style.display = 'none';
+      successEl.style.display = 'none';
+
+      try {
+        const response = await fetch('/api/brevo/subscribe', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({
+            email: currentEmail,
+            listId: listId
+          })
+        });
+
+        const data = await response.json();
+
+        if (response.ok) {
+          successEl.textContent = `Contact ajouté avec succès à la liste!`;
+          successEl.style.display = 'block';
+          
+          // Reload contact details to show updated lists
+          setTimeout(() => {
+            loadContactDetails(currentEmail);
+          }, 1000);
+        } else {
+          throw new Error(data.message || 'Failed to subscribe contact');
+        }
+      } catch (error) {
+        console.error('Error subscribing:', error);
+        errorEl.textContent = `Erreur: ${error.message}`;
+        errorEl.style.display = 'block';
+      } finally {
+        subscribeBtn.disabled = false;
+        subscribeBtn.innerHTML = originalText;
+      }
+    });
+  </script>
+</body>
+</html>
+
