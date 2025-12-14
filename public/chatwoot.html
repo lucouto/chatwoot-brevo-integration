@@ -317,6 +317,23 @@
       }
     });
 
+    // Try to extract email from URL parameters (if Chatwoot passes it)
+    function extractEmailFromURL() {
+      const urlParams = new URLSearchParams(window.location.search);
+      const hashParams = new URLSearchParams(window.location.hash.substring(1));
+      
+      const email = urlParams.get('email') || 
+                   hashParams.get('email') ||
+                   urlParams.get('contact_email') ||
+                   hashParams.get('contact_email');
+      
+      if (email) {
+        console.log('Found email in URL:', email);
+        return email;
+      }
+      return null;
+    }
+
     // Request contact info from Chatwoot on load and periodically
     function requestChatwootInfo() {
       if (window.parent) {
@@ -325,12 +342,22 @@
       }
     }
 
-    window.addEventListener('load', function() {
+    window.addEventListener('load', async function() {
+      // First, try to get email from URL parameters
+      const urlEmail = extractEmailFromURL();
+      if (urlEmail) {
+        currentEmail = urlEmail;
+        await loadContactDetails(urlEmail);
+        await loadLists();
+        return;
+      }
+
       // Request immediately on load
       requestChatwootInfo();
       
       // Also request after a short delay in case Chatwoot needs time to initialize
       setTimeout(requestChatwootInfo, 500);
+      setTimeout(requestChatwootInfo, 2000);
     });
 
     // Load contact details from Brevo
