@@ -120,6 +120,33 @@ async function createOrUpdateContact(email, attributes = {}, listIds = []) {
   }
 }
 
+async function updateBrevoContact(email, attributes = {}) {
+  if (!BREVO_API_KEY) {
+    throw new Error('BREVO_API_KEY is not configured');
+  }
+
+  try {
+    const response = await axios.put(
+      `${BREVO_API_URL}/contacts/${encodeURIComponent(email)}`,
+      {
+        ...(Object.keys(attributes).length > 0 && { attributes })
+      },
+      {
+        headers: {
+          'api-key': BREVO_API_KEY,
+          'Content-Type': 'application/json'
+        }
+      }
+    );
+    return response.data;
+  } catch (error) {
+    if (error.response?.data) {
+      throw new Error(error.response.data.message || 'Failed to update contact');
+    }
+    throw error;
+  }
+}
+
 async function getBrevoLists() {
   if (!BREVO_API_KEY) {
     throw new Error('BREVO_API_KEY is not configured');
@@ -361,6 +388,36 @@ app.get('/api/brevo/lists', async (req, res) => {
     console.error('Error fetching Brevo lists:', error);
     res.status(500).json({ 
       error: 'Failed to fetch lists from Brevo',
+      message: error.message 
+    });
+  }
+});
+
+// Update contact in Brevo
+app.put('/api/brevo/contact/:email', async (req, res) => {
+  try {
+    const { email } = req.params;
+    const { attributes } = req.body;
+
+    if (!email) {
+      return res.status(400).json({ error: 'Email is required' });
+    }
+
+    if (!attributes || Object.keys(attributes).length === 0) {
+      return res.status(400).json({ error: 'Attributes are required' });
+    }
+
+    const result = await updateBrevoContact(email, attributes);
+
+    res.json({
+      success: true,
+      email,
+      contact: result
+    });
+  } catch (error) {
+    console.error('Error updating contact:', error);
+    res.status(500).json({ 
+      error: 'Failed to update contact in Brevo',
       message: error.message 
     });
   }

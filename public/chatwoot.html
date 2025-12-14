@@ -229,6 +229,13 @@
       <div id="contactInfo" class="contact-info"></div>
       
       <div class="subscribe-section">
+        <h2>Actions</h2>
+        <button id="updateContactBtn" class="btn btn-secondary" style="width: 100%; margin-bottom: 12px;" disabled>
+          Mettre à jour depuis Chatwoot
+        </button>
+      </div>
+      
+      <div class="subscribe-section">
         <h2>Ajouter à une liste Brevo</h2>
         <select id="listSelect" class="list-select">
           <option value="">Chargement des listes...</option>
@@ -244,6 +251,7 @@
     let currentEmail = null;
     let contactData = null;
     let lists = [];
+    let chatwootContactData = null; // Store Chatwoot contact data
 
     // Helper function to validate JSON
     function isJSONValid(str) {
@@ -298,7 +306,8 @@
         conversation = eventData.data.conversation;
       } else if (eventData.email || eventData.identifier) {
         // Fallback: Direct email/identifier
-        contact = eventData;
+          contact = eventData;
+          chatwootContactData = contact;
       }
 
       if (contact) {
@@ -338,6 +347,10 @@
 
         if (email && email.includes('@')) {
           currentEmail = email;
+          // Enable update button if we have Chatwoot contact data
+          if (chatwootContactData) {
+            document.getElementById('updateContactBtn').disabled = false;
+          }
           // Load lists first so we can map IDs to names when displaying contact info
           await loadLists();
           await loadContactDetails(email);
@@ -350,6 +363,11 @@
           if (errorEl) {
             errorEl.textContent = 'Impossible de récupérer l\'email du contact depuis Chatwoot.';
             errorEl.style.display = 'block';
+          }
+        } else {
+          // No email but we have contact data, enable update button if possible
+          if (chatwootContactData) {
+            document.getElementById('updateContactBtn').disabled = false;
           }
         }
       } else {
@@ -439,6 +457,10 @@
           contactData = data.contact;
           displayContactInfo(data.contact, email);
           if (contentEl) contentEl.style.display = 'block';
+          // Enable update button if we have Chatwoot contact data
+          if (chatwootContactData) {
+            document.getElementById('updateContactBtn').disabled = false;
+          }
         }
       } catch (error) {
         console.error('Error loading contact:', error);
@@ -551,6 +573,100 @@
         listSelect.innerHTML = '<option value="">Erreur lors du chargement des listes</option>';
       }
     }
+
+    // Update contact from Chatwoot data
+    document.getElementById('updateContactBtn').addEventListener('click', async function() {
+      const errorEl = document.getElementById('error');
+      const successEl = document.getElementById('success');
+      const updateBtn = this;
+
+      if (!currentEmail || !chatwootContactData) {
+        showError('Aucune donnée Chatwoot disponible');
+        return;
+      }
+
+      const originalText = updateBtn.innerHTML;
+      updateBtn.disabled = true;
+      updateBtn.innerHTML = '<span class="spinner"></span> Mise à jour en cours...';
+
+      errorEl.style.display = 'none';
+      successEl.style.display = 'none';
+
+      try {
+        // Extract data from Chatwoot contact
+        // Chatwoot contact structure: { name: "First Last", additional_attributes: { phone_number: "...", name: "..." } }
+        const chatwootName = chatwootContactData.name || '';
+        const chatwootPhone = chatwootContactData.phone_number || 
+                             chatwootContactData.additional_attributes?.phone_number ||
+                             chatwootContactData.additional_attributes?.phone;
+        
+        // Split name into first and last name
+        let firstName = '';
+        let lastName = '';
+        if (chatwootName) {
+          const nameParts = chatwootName.trim().split(/\s+/);
+          if (nameParts.length >= 2) {
+            firstName = nameParts[0];
+            lastName = nameParts.slice(1).join(' ');
+          } else {
+            firstName = chatwootName;
+          }
+        }
+
+        // Format phone number for Brevo (remove spaces, ensure + prefix)
+        let whatsappNumber = null;
+        if (chatwootPhone) {
+          whatsappNumber = chatwootPhone.replace(/\s+/g, '').trim();
+          if (whatsappNumber && !whatsappNumber.startsWith('+')) {
+            // If it starts with 0, replace with +33 for France, or add country code
+            if (whatsappNumber.startsWith('0')) {
+              whatsappNumber = '+33' + whatsappNumber.substring(1);
+            } else {
+              whatsappNumber = '+' + whatsappNumber;
+            }
+          }
+        }
+
+        // Build attributes object for Brevo
+        const attributes = {};
+        if (firstName) attributes.FIRSTNAME = firstName;
+        if (lastName) attributes.LASTNAME = lastName;
+        if (whatsappNumber) attributes.WHATSAPP = whatsappNumber;
+
+        if (Object.keys(attributes).length === 0) {
+          throw new Error('Aucune donnée à mettre à jour (nom, prénom ou téléphone manquants)');
+        }
+
+        const response = await fetch(`/api/brevo/contact/${encodeURIComponent(currentEmail)}`, {
+          method: 'PUT',
+          headers: {
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({ attributes })
+        });
+
+        const data = await response.json();
+
+        if (response.ok) {
+          successEl.textContent = `Contact mis à jour avec succès dans Brevo!`;
+          successEl.style.display = 'block';
+          
+          // Reload contact details to show updated info
+          setTimeout(() => {
+            loadContactDetails(currentEmail);
+          }, 1000);
+        } else {
+          throw new Error(data.message || 'Failed to update contact');
+        }
+      } catch (error) {
+        console.error('Error updating contact:', error);
+        errorEl.textContent = `Erreur: ${error.message}`;
+        errorEl.style.display = 'block';
+      } finally {
+        updateBtn.disabled = false;
+        updateBtn.innerHTML = originalText;
+      }
+    });
 
     // Subscribe contact to list
     document.getElementById('subscribeBtn').addEventListener('click', async function() {
