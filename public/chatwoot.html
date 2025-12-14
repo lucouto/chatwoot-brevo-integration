@@ -234,7 +234,7 @@
           <option value="">Chargement des listes...</option>
         </select>
         <button id="subscribeBtn" class="btn btn-primary" disabled>
-          S'abonner à la liste
+          Inscrire à la liste
         </button>
       </div>
     </div>
@@ -338,8 +338,9 @@
 
         if (email && email.includes('@')) {
           currentEmail = email;
-          await loadContactDetails(email);
+          // Load lists first so we can map IDs to names when displaying contact info
           await loadLists();
+          await loadContactDetails(email);
         } else {
           console.warn('No valid email found in contact data:', contact);
           // Show error to user
@@ -449,14 +450,26 @@
       }
     }
 
+    // Helper function to get list names from IDs
+    function getListNames(listIds) {
+      if (!listIds || listIds.length === 0) return [];
+      return listIds.map(id => {
+        const list = lists.find(l => l.id === id);
+        return list ? list.name : `Liste ${id}`;
+      });
+    }
+
     // Display contact information
     function displayContactInfo(contact, email) {
       const contactInfoEl = document.getElementById('contactInfo');
 
       const attributes = contact.attributes || {};
-      const lists = contact.listIds || [];
+      const listIds = contact.listIds || [];
       const emailBlacklisted = contact.emailBlacklisted || false;
       const smsBlacklisted = contact.smsBlacklisted || false;
+
+      // Get list names from IDs
+      const listNames = getListNames(listIds);
 
       let html = `
         <h2>Informations du contact</h2>
@@ -474,10 +487,10 @@
             ${emailBlacklisted ? 'Email bloqué' : 'Actif'}
           </span>
         </div>
-        ${lists.length > 0 ? `
+        ${listNames.length > 0 ? `
           <div class="info-row">
             <span class="info-label">Listes:</span>
-            <span class="info-value">${lists.join(', ')}</span>
+            <span class="info-value">${listNames.join(', ')}</span>
           </div>
         ` : ''}
       `;
